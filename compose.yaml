@@ -1,0 +1,18 @@
+services:
+  releaseguard:
+    build: .
+    image: releaseguard:local
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./sample-project:/workspace:ro
+      - ./reports:/reports
+      - ./release-policy.yaml:/app/release-policy.yaml:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
