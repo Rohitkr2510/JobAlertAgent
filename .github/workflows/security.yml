@@ -42,10 +42,17 @@ jobs:
       - name: Hadolint
         run: docker run --rm -i hadolint/hadolint:v2.14.0-debian < Dockerfile
       - run: docker build -t job-alert-agent:security .
+      - name: Export final container filesystem
+        run: |
+          mkdir trivy-rootfs
+          container_id="$(docker create job-alert-agent:security)"
+          docker export "$container_id" | tar -C trivy-rootfs -xf -
+          docker rm "$container_id"
       - name: Generate Trivy SARIF
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: job-alert-agent:security
+          scan-type: rootfs
+          scan-ref: trivy-rootfs
           format: sarif
           output: trivy-results.sarif
           severity: CRITICAL,HIGH
@@ -59,7 +66,8 @@ jobs:
       - name: Enforce HIGH and CRITICAL vulnerability gate
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: job-alert-agent:security
+          scan-type: rootfs
+          scan-ref: trivy-rootfs
           format: table
           severity: CRITICAL,HIGH
           ignore-unfixed: true
