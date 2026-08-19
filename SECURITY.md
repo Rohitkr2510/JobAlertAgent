@@ -5,3 +5,5 @@ Do not open a public issue containing credentials, OAuth tokens, personal email 
 Supported security updates target the latest tagged release. Every change is checked by CodeQL, Bandit, pip-audit, Gitleaks, Hadolint, Trivy, tests, and container smoke tests before release.
 
 JobAlertAgent never needs a Gmail password. OAuth client files, refresh tokens, encryption keys, exported email, SQLite data, and reports must remain outside Git and are excluded by `.gitignore` and `.dockerignore`.
+
+Operational security design is documented in the [threat model](docs/security/threat-model.md) and [privacy lifecycle](docs/security/privacy.md). When reporting a vulnerability, include the affected version, reproduction conditions, impact, and suggested remediation without including real mailbox data.

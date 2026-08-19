@@ -5,6 +5,8 @@
 
 JobAlertAgent is a local, Docker-ready multi-account Gmail automation and Streamlit dashboard. It extracts job alerts, applies deterministic DevOps/experience/recency filters, removes duplicates, tracks applications, schedules daily scans, and creates prioritized Excel workbooks. It uses no LLM and no paid API.
 
+Start with the [documentation index](docs/index.md) or review the [system architecture](docs/architecture/system-architecture.md).
+
 ## What it does
 
 - Supports LinkedIn, Indeed, and Naukri alert emails
@@ -50,6 +52,7 @@ Open the repository's **Actions** tab. Every push automatically runs:
 - Signed GHCR releases with SBOM and provenance
 
 Both `CI Quality Gate` and `DevSecOps` must be green before a release is considered ready. See the [DevOps operations guide](docs/DEVOPS.md).
+The `Documentation` workflow also validates local links, required governance files, personal-data rules, and renders every Mermaid diagram.
 
 ## Offline demo
 
@@ -93,6 +96,8 @@ docker compose run --rm --entrypoint jobalert jobalert collect-gmail \
 ## Security
 
 Never commit `credentials.json`, `token.json`, exported emails, databases, or generated reports. These paths are ignored by Git and mounted into Docker at runtime.
+
+See the [threat model](docs/security/threat-model.md), [privacy lifecycle](docs/security/privacy.md), and [security policy](SECURITY.md).
 
 ## Limitations
 

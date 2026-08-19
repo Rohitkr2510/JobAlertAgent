@@ -38,3 +38,5 @@ Change `GRAFANA_ADMIN_PASSWORD` before using the monitoring stack outside an iso
 ## GitHub-only evidence
 
 The Actions page exposes logs, coverage, packages, SBOMs, build records, CodeQL results, Trivy SARIF, attestations, releases, and container packages. A local clone is not required to review this evidence.
+
+Repository administrators should also apply the [enterprise repository settings](operations/repository-settings.md) before the first production release.
