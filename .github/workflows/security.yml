@@ -42,7 +42,7 @@ jobs:
       - name: Hadolint
         run: docker run --rm -i hadolint/hadolint:v2.14.0-debian < Dockerfile
       - run: docker build -t job-alert-agent:security .
-      - uses: aquasecurity/trivy-action@0.33.1
+      - uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: job-alert-agent:security
           format: sarif
