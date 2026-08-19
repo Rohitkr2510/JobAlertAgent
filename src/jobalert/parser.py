@@ -1,7 +1,7 @@
 import re
 from datetime import UTC, datetime, timedelta
 from email import policy
-from email.message import Message
+from email.message import EmailMessage
 from email.parser import BytesParser
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -13,7 +13,7 @@ from jobalert.models import Job
 TRACKING_KEYS = ("url", "dest", "destination", "redirect", "redirectUrl")
 
 
-def _html(message: Message) -> str:
+def _html(message: EmailMessage) -> str:
     if message.is_multipart():
         for part in message.walk():
             if part.get_content_type() == "text/html":
@@ -43,7 +43,7 @@ def _source(sender: str) -> str:
     return "Other"
 
 
-def _received(message: Message) -> datetime:
+def _received(message: EmailMessage) -> datetime:
     from email.utils import parsedate_to_datetime
 
     value = message.get("Date")
@@ -51,7 +51,7 @@ def _received(message: Message) -> datetime:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
-def parse_message(message: Message) -> list[Job]:
+def parse_message(message: EmailMessage) -> list[Job]:
     soup = BeautifulSoup(_html(message), "html.parser")
     received = _received(message)
     source = _source(message.get("From", ""))
@@ -59,10 +59,10 @@ def parse_message(message: Message) -> list[Job]:
     seen: set[str] = set()
     for link in soup.find_all("a", href=True):
         title = " ".join(link.get_text(" ", strip=True).split())
-        url = _clean_url(link["href"])
+        url = _clean_url(str(link["href"]))
         if len(title) < 4 or not url.startswith("http") or url in seen:
             continue
-        context = " ".join(link.parent.get_text(" ", strip=True).split())
+        context = " ".join((link.parent or link).get_text(" ", strip=True).split())
         if not re.search(
             r"(?i)devops|site reliability|\bsre\b|cloud engineer|platform engineer|"
             r"infrastructure|kubernetes|build.{0,5}release",
@@ -70,8 +70,8 @@ def parse_message(message: Message) -> list[Job]:
         ):
             continue
         seen.add(url)
-        company = link.get("data-company", "Not mentioned")
-        location = link.get("data-location", "Not mentioned")
+        company = str(link.get("data-company", "Not mentioned"))
+        location = str(link.get("data-location", "Not mentioned"))
         experience_match = re.search(
             r"(?i)(\d+)\s*(?:-|to)\s*(\d+)\s*years?|(?:experience\s*:?)\s*(\d+)\+?\s*years?",
             context,

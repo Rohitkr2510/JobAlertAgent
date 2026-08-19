@@ -1,0 +1,18 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {"type": "stat", "title": "Service Up", "targets": [{"expr": "up{job=\"jobalert\"}"}], "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0}},
+    {"type": "stat", "title": "Connected Accounts", "targets": [{"expr": "jobalert_connected_accounts"}], "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0}},
+    {"type": "stat", "title": "Jobs Collected", "targets": [{"expr": "jobalert_jobs_collected"}], "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0}},
+    {"type": "stat", "title": "High Priority", "targets": [{"expr": "jobalert_high_priority_jobs"}], "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0}},
+    {"type": "timeseries", "title": "Failed Runs", "targets": [{"expr": "jobalert_sync_failures_total"}], "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6}},
+    {"type": "logs", "title": "Container Logs", "datasource": {"type": "loki", "uid": "Loki"}, "targets": [{"expr": "{container=~\".*jobalert.*\"}"}], "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6}}
+  ],
+  "refresh": "15s",
+  "schemaVersion": 41,
+  "tags": ["jobalert", "devops"],
+  "title": "JobAlertAgent Operations",
+  "uid": "jobalert-operations",
+  "version": 1
+}

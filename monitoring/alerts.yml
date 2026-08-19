@@ -1,0 +1,24 @@
+groups:
+  - name: jobalert
+    rules:
+      - alert: JobAlertAgentDown
+        expr: up{job="jobalert"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: JobAlertAgent operations endpoint is unavailable
+      - alert: JobAlertAgentSyncFailures
+        expr: increase(jobalert_sync_failures_total[1h]) >= 3
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: JobAlertAgent has repeated synchronization failures
+      - alert: JobAlertAgentNoEnabledAccounts
+        expr: jobalert_connected_accounts > 0 and jobalert_enabled_accounts == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: All configured Gmail accounts are disabled
