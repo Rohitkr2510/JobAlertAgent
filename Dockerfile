@@ -1,11 +1,17 @@
 FROM python:3.14-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
+# Apply published Debian security fixes from the base image repository.
+# hadolint ignore=DL3005
+RUN apt-get update \
+    && apt-get upgrade --yes \
+    && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml README.md ./
 COPY src ./src
 # The local project is versioned in pyproject.toml; transitive ranges are audited by pip-audit.
 # hadolint ignore=DL3013
-RUN pip install --no-cache-dir '.[gmail,ui,ops]'
+RUN python -m pip install --no-cache-dir --upgrade 'setuptools>=78.1.1' 'msgpack>=1.2.1' \
+    && python -m pip install --no-cache-dir '.[gmail,ui,ops]'
 COPY config ./config
 RUN useradd --system --create-home jobalert && mkdir -p data reports secrets && chown -R jobalert:jobalert /app
 USER jobalert
