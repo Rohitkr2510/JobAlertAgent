@@ -7,7 +7,7 @@ from openpyxl import load_workbook
 from jobalert.config import Config
 from jobalert.parser import parse_message
 from jobalert.report import write_report
-from jobalert.scoring import score_job
+from jobalert.scoring import is_recent, score_job
 
 
 def config() -> Config:
@@ -46,3 +46,9 @@ def test_parse_score_and_report(tmp_path: Path) -> None:
     report = write_report([job], tmp_path)
     workbook = load_workbook(report)
     assert workbook["High Priority"].max_row == 2
+
+
+def test_old_job_is_rejected() -> None:
+    job = parse_message(message())[0]
+    now = datetime(2026, 8, 21, 9, tzinfo=UTC)
+    assert not is_recent(job, config(), now)

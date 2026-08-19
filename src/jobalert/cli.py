@@ -6,7 +6,7 @@ from jobalert.database import save_new
 from jobalert.gmail_client import authenticate, fetch_messages
 from jobalert.parser import parse_eml, parse_message
 from jobalert.report import write_report
-from jobalert.scoring import score_job
+from jobalert.scoring import is_recent, score_job
 
 
 def parser() -> argparse.ArgumentParser:
@@ -44,6 +44,7 @@ def main() -> None:
             args.credentials, args.token, config.hours, config.sender_domains
         ):
             jobs.extend(parse_message(message))
+    jobs = [job for job in jobs if is_recent(job, config)]
     jobs = save_new([score_job(job, config) for job in jobs], args.database)
     report = write_report(jobs, args.output)
     print(f"New jobs: {len(jobs)}")

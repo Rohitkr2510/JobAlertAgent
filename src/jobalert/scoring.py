@@ -44,3 +44,9 @@ def score_job(job: Job, config: Config, now: datetime | None = None) -> Job:
     )
     job.reason = ", ".join(reasons)
     return job
+
+
+def is_recent(job: Job, config: Config, now: datetime | None = None) -> bool:
+    now = now or datetime.now(UTC)
+    reference = job.posted_at or job.email_received_at
+    return now - timedelta(hours=config.hours) <= reference <= now + timedelta(minutes=5)

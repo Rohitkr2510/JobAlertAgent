@@ -22,10 +22,13 @@ jobalert collect-eml tests/fixtures --config config/job-filters.yaml --output re
 
 ## Gmail setup (free)
 
+Follow the complete [free Gmail OAuth setup guide](docs/GMAIL_SETUP.md). In short:
+
 1. Create a Google Cloud project and enable the Gmail API.
-2. Create an OAuth Desktop App and download it as `secrets/credentials.json`.
-3. Run `jobalert gmail-auth --credentials secrets/credentials.json --token secrets/token.json` once on a machine with a browser.
-4. Run the collector:
+2. Configure the OAuth audience and add your Gmail address as a test user.
+3. Create an OAuth Desktop App and download it as `secrets/credentials.json`.
+4. Run `jobalert gmail-auth --credentials secrets/credentials.json --token secrets/token.json` once on a machine with a browser.
+5. Run the collector:
 
 ```bash
 jobalert collect-gmail \
