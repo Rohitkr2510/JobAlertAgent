@@ -42,19 +42,29 @@ jobs:
       - name: Hadolint
         run: docker run --rm -i hadolint/hadolint:v2.14.0-debian < Dockerfile
       - run: docker build -t job-alert-agent:security .
-      - uses: aquasecurity/trivy-action@v0.36.0
+      - name: Generate Trivy SARIF
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: job-alert-agent:security
           format: sarif
           output: trivy-results.sarif
           severity: CRITICAL,HIGH
           ignore-unfixed: true
-          exit-code: "1"
+          scanners: vuln
+          exit-code: "0"
       - name: Upload Trivy SARIF
-        if: always()
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
+      - name: Enforce HIGH and CRITICAL vulnerability gate
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: job-alert-agent:security
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          scanners: vuln
+          exit-code: "1"
 
   codeql:
     runs-on: ubuntu-latest
