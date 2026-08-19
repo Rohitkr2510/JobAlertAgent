@@ -105,12 +105,15 @@ class Database:
         return fresh
 
     def rows(self, table: str, limit: int = 1000) -> list[dict]:
-        if table not in {"accounts", "jobs", "runs"}:
+        queries = {
+            "accounts": "SELECT * FROM accounts ORDER BY rowid DESC LIMIT ?",
+            "jobs": "SELECT * FROM jobs ORDER BY rowid DESC LIMIT ?",
+            "runs": "SELECT * FROM runs ORDER BY rowid DESC LIMIT ?",
+        }
+        if table not in queries:
             raise ValueError("Unsupported table")
         with self.connect() as connection:
-            rows = connection.execute(
-                f"SELECT * FROM {table} ORDER BY rowid DESC LIMIT ?", (limit,)
-            ).fetchall()
+            rows = connection.execute(queries[table], (limit,)).fetchall()
         return [dict(row) for row in rows]
 
     def update_job_status(self, unique_id: str, status: str) -> None:

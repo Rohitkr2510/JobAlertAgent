@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -8,6 +9,8 @@ from jobalert.account_manager import AccountManager
 from jobalert.config import load_config
 from jobalert.database import Database
 from jobalert.sync import sync_account
+
+LOGGER = logging.getLogger(__name__)
 
 
 def scheduled_tick(database: Database, manager: AccountManager, config_path) -> None:
@@ -27,7 +30,7 @@ def scheduled_tick(database: Database, manager: AccountManager, config_path) -> 
             try:
                 sync_account(account["email"], manager, database, config)
             except Exception:
-                continue
+                LOGGER.exception("scheduled_sync_failed")
 
 
 def start_scheduler(database: Database, manager: AccountManager, config_path):

@@ -34,3 +34,8 @@ def test_database_rejects_invalid_status(tmp_path: Path) -> None:
     database = Database(tmp_path / "jobs.db")
     with pytest.raises(ValueError):
         database.update_job_status("missing", "Unknown")
+    with pytest.raises(ValueError, match="Unsupported table"):
+        database.rows("secrets")
+    assert database.setting("schedule_enabled", "false") == "false"
+    database.set_setting("schedule_enabled", "true")
+    assert database.setting("schedule_enabled") == "true"

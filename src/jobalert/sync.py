@@ -1,3 +1,5 @@
+import hashlib
+import logging
 from datetime import UTC, datetime
 
 from jobalert.account_manager import AccountManager
@@ -6,6 +8,8 @@ from jobalert.database import Database
 from jobalert.gmail_client import fetch_messages_with_credentials
 from jobalert.parser import parse_message
 from jobalert.scoring import is_recent, score_job
+
+LOGGER = logging.getLogger(__name__)
 
 
 def sync_account(
@@ -36,6 +40,14 @@ def sync_account(
                 VALUES (?, ?, ?, ?, ?, 'success')""",
                 (started, email, messages, len(jobs), len(fresh)),
             )
+        account_id = hashlib.sha256(email.lower().encode()).hexdigest()[:12]
+        LOGGER.info(
+            "gmail_sync_completed account_id=%s emails=%s jobs=%s new=%s",
+            account_id,
+            messages,
+            len(jobs),
+            len(fresh),
+        )
         return {"account": email, "emails": messages, "jobs": len(jobs), "new": len(fresh)}
     except Exception as error:
         with database.connect() as connection:
@@ -47,4 +59,6 @@ def sync_account(
                 (started_at, account_email, status, error) VALUES (?, ?, 'failed', ?)""",
                 (started, email, str(error)),
             )
+        account_id = hashlib.sha256(email.lower().encode()).hexdigest()[:12]
+        LOGGER.exception("gmail_sync_failed account_id=%s", account_id)
         raise

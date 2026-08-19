@@ -1,6 +1,7 @@
 # JobAlertAgent
 
 [![Validate JobAlertAgent](https://github.com/Rohitkr2510/JobAlertAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/Rohitkr2510/JobAlertAgent/actions/workflows/ci.yml)
+[![DevSecOps](https://github.com/Rohitkr2510/JobAlertAgent/actions/workflows/security.yml/badge.svg)](https://github.com/Rohitkr2510/JobAlertAgent/actions/workflows/security.yml)
 
 JobAlertAgent is a local, Docker-ready multi-account Gmail automation and Streamlit dashboard. It extracts job alerts, applies deterministic DevOps/experience/recency filters, removes duplicates, tracks applications, schedules daily scans, and creates prioritized Excel workbooks. It uses no LLM and no paid API.
 
@@ -15,6 +16,8 @@ JobAlertAgent is a local, Docker-ready multi-account Gmail automation and Stream
 - Encrypts a separate OAuth token for every connected Gmail account
 - Provides a local dashboard, application tracker, filters, logs, scheduling, and reports
 - Validates itself in GitHub Actions with tests, package build, Docker build, and UI health check
+- Publishes signed, attested multi-platform releases with an SPDX SBOM to GHCR
+- Exposes health, readiness and Prometheus metrics with Grafana, Loki and Alertmanager
 
 ## Dashboard
 
@@ -35,15 +38,18 @@ docker compose up --build
 
 Open the repository's **Actions** tab. Every push automatically runs:
 
-- Ruff linting on Python 3.11 and 3.12
+- Python 3.14 runtime validation
+- Ruff, mypy, coverage, Bandit, pip-audit, Gitleaks, Hadolint, Trivy and CodeQL
 - Unit and integration tests
 - Offline functional self-check
 - Dashboard import test
 - Python package build
 - Docker image build
 - Live Streamlit health-endpoint smoke test
+- Operations API and monitoring configuration validation
+- Signed GHCR releases with SBOM and provenance
 
-The `Validate JobAlertAgent` workflow must be green before a release is considered ready.
+Both `CI Quality Gate` and `DevSecOps` must be green before a release is considered ready. See the [DevOps operations guide](docs/DEVOPS.md).
 
 ## Offline demo
 
