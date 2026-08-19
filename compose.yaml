@@ -1,18 +1,13 @@
 services:
-  releaseguard:
+  jobalert:
     build: .
-    image: releaseguard:local
-    ports:
-      - "8080:8080"
+    image: job-alert-agent:local
     volumes:
-      - ./sample-project:/workspace:ro
-      - ./reports:/reports
-      - ./release-policy.yaml:/app/release-policy.yaml:ro
-    read_only: true
-    tmpfs:
-      - /tmp
+      - ./config:/app/config:ro
+      - ./secrets:/app/secrets
+      - ./data:/app/data
+      - ./reports:/app/reports
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-

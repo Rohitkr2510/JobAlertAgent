@@ -1,0 +1,16 @@
+hours: 24
+minimum_score: 60
+high_priority_score: 80
+maximum_experience_years: 5
+preferred_locations: [remote, bengaluru, bangalore, hyderabad, pune, mumbai, delhi, gurugram, noida]
+role_keywords:
+  - devops
+  - site reliability
+  - sre
+  - cloud engineer
+  - platform engineer
+  - build and release
+  - infrastructure engineer
+  - kubernetes engineer
+skill_keywords: [aws, docker, kubernetes, jenkins, github actions, terraform, linux, python, shell, ci/cd, ansible, git]
+sender_domains: [linkedin.com, indeed.com, naukri.com]
