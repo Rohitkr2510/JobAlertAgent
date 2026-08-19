@@ -1,6 +1,8 @@
 # JobAlertAgent
 
-JobAlertAgent is a local, Docker-ready automation that reads job-alert emails from Gmail or exported `.eml` files, extracts job links, applies deterministic DevOps/experience/recency filters, removes duplicates, stores history in SQLite, and creates a prioritized Excel workbook. It uses no LLM and no paid API.
+[![Validate JobAlertAgent](https://github.com/Rohitkr2510/JobAlertAgent/actions/workflows/ci.yml/badge.svg)](https://github.com/Rohitkr2510/JobAlertAgent/actions/workflows/ci.yml)
+
+JobAlertAgent is a local, Docker-ready multi-account Gmail automation and Streamlit dashboard. It extracts job alerts, applies deterministic DevOps/experience/recency filters, removes duplicates, tracks applications, schedules daily scans, and creates prioritized Excel workbooks. It uses no LLM and no paid API.
 
 ## What it does
 
@@ -10,6 +12,38 @@ JobAlertAgent is a local, Docker-ready automation that reads job-alert emails fr
 - Scores skills and experience for an approximately 2.7-year profile
 - Generates High Priority, Medium Priority, Needs Review, All Jobs, and Run Summary sheets
 - Keeps OAuth tokens, credentials, mail, database, and reports outside the image
+- Encrypts a separate OAuth token for every connected Gmail account
+- Provides a local dashboard, application tracker, filters, logs, scheduling, and reports
+- Validates itself in GitHub Actions with tests, package build, Docker build, and UI health check
+
+## Dashboard
+
+```bash
+pip install -e '.[gmail,ui]'
+streamlit run src/jobalert/ui.py
+```
+
+Open `http://localhost:8501`. For UI-based Gmail connection, create a Google OAuth **Web application** client with `http://localhost:8501` as an authorized redirect URI, then save it as `secrets/web_credentials.json`.
+
+With Docker:
+
+```bash
+docker compose up --build
+```
+
+## Validation without cloning
+
+Open the repository's **Actions** tab. Every push automatically runs:
+
+- Ruff linting on Python 3.11 and 3.12
+- Unit and integration tests
+- Offline functional self-check
+- Dashboard import test
+- Python package build
+- Docker image build
+- Live Streamlit health-endpoint smoke test
+
+The `Validate JobAlertAgent` workflow must be green before a release is considered ready.
 
 ## Offline demo
 
@@ -43,7 +77,7 @@ OAuth uses read-only Gmail access. The first authorization needs a browser; norm
 ## Docker
 
 ```bash
-docker compose run --rm jobalert collect-gmail \
+docker compose run --rm --entrypoint jobalert jobalert collect-gmail \
   --credentials /app/secrets/credentials.json \
   --token /app/secrets/token.json \
   --config /app/config/job-filters.yaml \

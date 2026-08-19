@@ -7,11 +7,13 @@ from jobalert.gmail_client import authenticate, fetch_messages
 from jobalert.parser import parse_eml, parse_message
 from jobalert.report import write_report
 from jobalert.scoring import is_recent, score_job
+from jobalert.selfcheck import run_self_check
 
 
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(prog="jobalert")
     commands = root.add_subparsers(dest="command", required=True)
+    commands.add_parser("self-check")
     auth = commands.add_parser("gmail-auth")
     auth.add_argument("--credentials", type=Path, required=True)
     auth.add_argument("--token", type=Path, required=True)
@@ -30,6 +32,10 @@ def parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = parser().parse_args()
+    if args.command == "self-check":
+        for name, status in run_self_check().items():
+            print(f"{name}: {status}")
+        return
     if args.command == "gmail-auth":
         authenticate(args.credentials, args.token)
         print("Gmail authorization saved.")

@@ -63,9 +63,15 @@ def authenticate(credentials_path: Path, token_path: Path) -> None:
 
 
 def fetch_messages(credentials_path: Path, token_path: Path, hours: int, domains: list[str]):
+    yield from fetch_messages_with_credentials(
+        _credentials(credentials_path, token_path), hours, domains
+    )
+
+
+def fetch_messages_with_credentials(credentials, hours: int, domains: list[str]):
     from googleapiclient.discovery import build
 
-    service = build("gmail", "v1", credentials=_credentials(credentials_path, token_path))
+    service = build("gmail", "v1", credentials=credentials, cache_discovery=False)
     for message_id in iter_message_ids(service, build_query(hours, domains)):
         response = (
             service.users().messages().get(userId="me", id=message_id, format="raw").execute()

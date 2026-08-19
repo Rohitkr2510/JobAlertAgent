@@ -18,6 +18,8 @@ class Job:
     score: int = 0
     priority: str = "Needs Review"
     reason: str = ""
+    account_email: str = "Local import"
+    application_status: str = "New"
 
     @property
     def unique_id(self) -> str:

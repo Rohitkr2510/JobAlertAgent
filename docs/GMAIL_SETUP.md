@@ -28,6 +28,17 @@ You do not need to publish or verify the app when it is only for your own test-u
 5. Download the JSON file.
 6. Rename it to `credentials.json` and place it in the local `secrets/` directory.
 
+### Dashboard and multiple accounts
+
+For the web dashboard, create a second OAuth client of type **Web application**:
+
+1. Add `http://localhost:8501` under **Authorized redirect URIs**.
+2. Download the client JSON.
+3. Save it as `secrets/web_credentials.json`.
+4. Start the dashboard and use **Email Accounts → Connect Gmail account**.
+
+The email address entered in the dashboard is only a login hint. JobAlertAgent verifies and stores the address returned by Google after consent. Each connected account receives its own encrypted local token.
+
 Do not upload this file to GitHub. The repository's `.gitignore` already excludes `secrets/`.
 
 ## 4. Authorize once
@@ -74,7 +85,7 @@ The workbook appears in `reports/daily-jobs-YYYY-MM-DD.xlsx`. Run it a second ti
 Perform the first browser authorization natively. After `token.json` exists:
 
 ```bash
-docker compose run --rm jobalert collect-gmail \
+docker compose run --rm --entrypoint jobalert jobalert collect-gmail \
   --credentials /app/secrets/credentials.json \
   --token /app/secrets/token.json \
   --config /app/config/job-filters.yaml \

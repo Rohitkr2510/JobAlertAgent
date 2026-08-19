@@ -2,8 +2,14 @@ services:
   jobalert:
     build: .
     image: job-alert-agent:local
+    ports:
+      - "8501:8501"
+    environment:
+      JOBALERT_ROOT: /app
+      JOBALERT_REDIRECT_URI: http://localhost:8501
+      JOBALERT_TIMEZONE: ${TZ:-Asia/Kolkata}
     volumes:
-      - ./config:/app/config:ro
+      - ./config:/app/config
       - ./secrets:/app/secrets
       - ./data:/app/data
       - ./reports:/app/reports

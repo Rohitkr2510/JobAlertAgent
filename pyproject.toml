@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "job-alert-agent"
-version = "0.1.0"
-description = "Offline-first Gmail job alert collector and Excel report generator"
+version = "0.2.0"
+description = "Offline-first multi-account Gmail job alert dashboard"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -18,7 +18,14 @@ gmail = [
   "google-auth-oauthlib>=1.2,<2",
   "google-auth-httplib2>=0.2,<1",
 ]
-dev = ["pytest>=8,<9", "ruff>=0.6,<1"]
+ui = [
+  "apscheduler>=3.10,<4",
+  "cryptography>=43,<51",
+  "pandas>=2.2,<4",
+  "streamlit>=1.38,<2",
+  "tzdata>=2025.2",
+]
+dev = ["build>=1.2,<2", "pytest>=8,<9", "ruff>=0.6,<1"]
 
 [project.scripts]
 jobalert = "jobalert.cli:main"

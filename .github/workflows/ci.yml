@@ -1,4 +1,4 @@
-name: CI
+name: Validate JobAlertAgent
 
 on:
   push:
@@ -8,14 +8,51 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  python-validation:
+    name: Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
           cache: pip
-      - run: pip install -e '.[dev]'
-      - run: ruff check .
-      - run: pytest -q
+      - name: Install all features
+        run: pip install -e '.[dev,gmail,ui]'
+      - name: Lint
+        run: ruff check .
+      - name: Test
+        run: pytest -q
+      - name: Offline functional self-check
+        run: jobalert self-check
+      - name: Import dashboard
+        run: python -c "import jobalert.ui; print('dashboard import: pass')"
+      - name: Build Python package
+        run: python -m build
+
+  docker-validation:
+    name: Docker build and UI health
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t job-alert-agent:ci .
+      - name: Run dashboard
+        run: docker run -d --name jobalert-ci -p 8501:8501 job-alert-agent:ci
+      - name: Wait for health endpoint
+        run: |
+          for attempt in {1..30}; do
+            if curl --fail --silent http://localhost:8501/_stcore/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs jobalert-ci
+          exit 1
+      - name: Container logs
+        if: always()
+        run: docker logs jobalert-ci || true
