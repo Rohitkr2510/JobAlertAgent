@@ -87,10 +87,10 @@ jobs:
       - name: Validate Prometheus configuration
         run: |
           docker run --rm --entrypoint promtool \
-            -v "$PWD/monitoring:/monitoring:ro" prom/prometheus:v3.5.0 \
-            check config /monitoring/prometheus.yml
+            -v "$PWD/monitoring:/etc/prometheus:ro" prom/prometheus:v3.5.0 \
+            check config /etc/prometheus/prometheus.yml
           docker run --rm --entrypoint promtool \
-            -v "$PWD/monitoring:/monitoring:ro" prom/prometheus:v3.5.0 \
-            check rules /monitoring/alerts.yml
+            -v "$PWD/monitoring:/etc/prometheus:ro" prom/prometheus:v3.5.0 \
+            check rules /etc/prometheus/alerts.yml
       - name: Validate monitoring YAML and Grafana JSON
         run: python scripts/validate_monitoring.py

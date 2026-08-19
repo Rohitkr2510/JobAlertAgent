@@ -3,6 +3,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
+# The local project is versioned in pyproject.toml; transitive ranges are audited by pip-audit.
+# hadolint ignore=DL3013
 RUN pip install --no-cache-dir '.[gmail,ui,ops]'
 COPY config ./config
 RUN useradd --system --create-home jobalert && mkdir -p data reports secrets && chown -R jobalert:jobalert /app
