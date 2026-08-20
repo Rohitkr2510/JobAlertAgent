@@ -52,13 +52,20 @@ def accounts_page(database: Database, manager: AccountManager) -> None:
             if not expected_state or st.query_params["state"] != expected_state:
                 raise ValueError("OAuth state mismatch; start the connection again.")
             current = REDIRECT_URI + "?" + urlencode(st.query_params.to_dict())
-            email = manager.complete_authorization(
-                WEB_CREDENTIALS,
-                REDIRECT_URI,
-                current,
-                st.query_params["state"],
-            )
-            database.set_setting("oauth_state", "")
+            code_verifier = database.setting("oauth_code_verifier")
+
+            try:
+                email = manager.complete_authorization(
+                    WEB_CREDENTIALS,
+                    REDIRECT_URI,
+                    current,
+                    st.query_params["state"],
+                    code_verifier,
+                )
+            finally:
+                database.set_setting("oauth_code_verifier", "")
+                database.set_setting("oauth_state", "")
+
             st.query_params.clear()
             st.success(f"Connected {email}")
         except Exception as error:
@@ -73,8 +80,13 @@ def accounts_page(database: Database, manager: AccountManager) -> None:
         elif "@" not in email_hint:
             st.error("Enter a valid email address.")
         else:
-            url, state = manager.authorization_url(WEB_CREDENTIALS, REDIRECT_URI, email_hint)
+            url, state, code_verifier = manager.authorization_url(
+                WEB_CREDENTIALS,
+                REDIRECT_URI,
+                email_hint,
+            )
             database.set_setting("oauth_state", state)
+            database.set_setting("oauth_code_verifier", code_verifier)
             st.link_button("Continue securely with Google", url, type="primary")
 
     for account in database.rows("accounts"):
