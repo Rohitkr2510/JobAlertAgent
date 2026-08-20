@@ -10,6 +10,12 @@ from google_auth_oauthlib.flow import Flow
 from jobalert.database import Database
 from jobalert.gmail_client import SCOPES
 from jobalert.token_store import TokenVault
+import os
+
+if os.getenv("JOBALERT_REDIRECT_URI", "http://localhost:8501").startswith(
+    "http://localhost"
+):
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 
 class AccountManager:
@@ -18,16 +24,22 @@ class AccountManager:
         self.vault = vault
 
     def authorization_url(
-        self, credentials_path: Path, redirect_uri: str, email_hint: str
-    ) -> tuple[str, str]:
-        flow = Flow.from_client_secrets_file(credentials_path, scopes=SCOPES)
+    self, credentials_path: Path, redirect_uri: str, email_hint: str
+    ):
+        flow = Flow.from_client_secrets_file(
+            credentials_path,
+            scopes=SCOPES,
+        )
         flow.redirect_uri = redirect_uri
-        return flow.authorization_url(
+
+        url, state = flow.authorization_url(
             access_type="offline",
             include_granted_scopes="true",
             prompt="consent select_account",
             login_hint=email_hint,
         )
+
+        return url, state, flow.code_verifier
 
     def complete_authorization(
         self,
@@ -35,12 +47,16 @@ class AccountManager:
         redirect_uri: str,
         authorization_response: str,
         state: str,
+        code_verifier=None,
     ) -> str:
         from googleapiclient.discovery import build
 
         flow = Flow.from_client_secrets_file(credentials_path, scopes=SCOPES, state=state)
         flow.redirect_uri = redirect_uri
-        flow.fetch_token(authorization_response=authorization_response)
+        flow.fetch_token(
+            authorization_response=authorization_response,
+            code_verifier=code_verifier,
+        )
         service = build("gmail", "v1", credentials=flow.credentials, cache_discovery=False)
         email = service.users().getProfile(userId="me").execute()["emailAddress"]
         self.upsert(email, flow.credentials)
