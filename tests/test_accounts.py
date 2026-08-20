@@ -76,9 +76,7 @@ def test_complete_authorization_passes_pkce_verifier(
         credentials = FakeCredentials()
 
         @classmethod
-        def from_client_secrets_file(
-            cls, path: Path, scopes: list[str], state: str
-        ) -> "FakeFlow":
+        def from_client_secrets_file(cls, path: Path, scopes: list[str], state: str) -> "FakeFlow":
             assert state == "test-state"
             return cls()
 
@@ -102,10 +100,7 @@ def test_complete_authorization_passes_pkce_verifier(
         return FakeService()
 
     monkeypatch.setattr(account_manager, "Flow", FakeFlow)
-    monkeypatch.setattr(
-        "googleapiclient.discovery.build",
-        fake_build,
-    )
+    monkeypatch.setattr("googleapiclient.discovery.build", fake_build)
 
     manager = AccountManager(Database(tmp_path / "jobs.db"), TokenVault(tmp_path / "token.key"))
     monkeypatch.setattr(manager, "upsert", lambda email, credentials: None)
