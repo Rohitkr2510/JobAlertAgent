@@ -1,7 +1,9 @@
 import hashlib
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -10,12 +12,16 @@ from google_auth_oauthlib.flow import Flow
 from jobalert.database import Database
 from jobalert.gmail_client import SCOPES
 from jobalert.token_store import TokenVault
-import os
 
-if os.getenv("JOBALERT_REDIRECT_URI", "http://localhost:8501").startswith(
-    "http://localhost"
-):
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
+def _configure_local_oauth_transport() -> None:
+    redirect_uri = os.getenv("JOBALERT_REDIRECT_URI", "http://localhost:8501")
+    parsed = urlparse(redirect_uri)
+    if parsed.scheme == "http" and parsed.hostname == "localhost":
+        os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
+
+_configure_local_oauth_transport()
 
 
 class AccountManager:
@@ -24,8 +30,11 @@ class AccountManager:
         self.vault = vault
 
     def authorization_url(
-    self, credentials_path: Path, redirect_uri: str, email_hint: str
-    ):
+        self,
+        credentials_path: Path,
+        redirect_uri: str,
+        email_hint: str,
+    ) -> tuple[str, str, str]:
         flow = Flow.from_client_secrets_file(
             credentials_path,
             scopes=SCOPES,
@@ -47,7 +56,7 @@ class AccountManager:
         redirect_uri: str,
         authorization_response: str,
         state: str,
-        code_verifier=None,
+        code_verifier: str | None = None,
     ) -> str:
         from googleapiclient.discovery import build
 
