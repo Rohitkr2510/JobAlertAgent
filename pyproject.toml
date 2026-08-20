@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "job-alert-agent"
-version = "0.3.0"
+version = "0.4.0"
 description = "Offline-first multi-account Gmail job alert dashboard"
 readme = "README.md"
 requires-python = ">=3.14"
