@@ -22,6 +22,9 @@ WEB_CREDENTIALS = ROOT / os.getenv("JOBALERT_WEB_CREDENTIALS", "secrets/web_cred
 KEY_PATH = ROOT / os.getenv("JOBALERT_TOKEN_KEY", "secrets/token.key")
 REDIRECT_URI = os.getenv("JOBALERT_REDIRECT_URI", "http://localhost:8501")
 
+STATUS_OPTIONS = ["New", "Saved", "Applied", "Interview", "Offer", "Rejected"]
+PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
 
 @st.cache_resource
 def services():
@@ -32,7 +35,7 @@ def services():
 
 
 def metrics(database: Database) -> None:
-    jobs = database.rows("jobs")
+    jobs = database.rows("jobs", 10000)
     accounts = database.rows("accounts")
     high = sum(job["priority"] == "High Priority" for job in jobs)
     applied = sum(job["application_status"] == "Applied" for job in jobs)
@@ -121,61 +124,191 @@ def accounts_page(database: Database, manager: AccountManager) -> None:
                 st.rerun()
 
 
+def _apply_job_filters(frame: pd.DataFrame) -> pd.DataFrame:
+    search = st.text_input(
+        "Search jobs",
+        placeholder="Search by job ID, title, company, location, skills, or URL...",
+        key="jobs-search",
+    ).strip().lower()
+
+    accounts = ["All", *sorted(frame["account_email"].dropna().astype(str).unique())]
+    sources = ["All", *sorted(frame["source"].dropna().astype(str).unique())]
+    priorities = ["All", *sorted(frame["priority"].dropna().astype(str).unique())]
+    statuses = ["All", *STATUS_OPTIONS]
+
+    row1 = st.columns(4)
+    account = row1[0].selectbox("Account", accounts, key="jobs-account")
+    source = row1[1].selectbox("Source", sources, key="jobs-source")
+    priority = row1[2].selectbox("Priority", priorities, key="jobs-priority")
+    status = row1[3].selectbox("Application status", statuses, key="jobs-status")
+
+    row2 = st.columns(4)
+    location = row2[0].text_input("Location contains", key="jobs-location")
+    experience = row2[1].text_input("Experience contains", key="jobs-experience")
+    minimum = row2[2].slider("Minimum score", 0, 100, 0, key="jobs-min-score")
+    date_filter = row2[3].selectbox(
+        "Received",
+        ["All time", "Today", "Last 3 days", "Last 7 days", "Last 30 days"],
+        key="jobs-date",
+    )
+
+    filtered = frame.copy()
+    if search:
+        searchable = ["unique_id", "title", "company", "location", "skills", "source", "url"]
+        mask = pd.Series(False, index=filtered.index)
+        for column in searchable:
+            mask |= filtered[column].fillna("").astype(str).str.lower().str.contains(search, regex=False)
+        filtered = filtered[mask]
+    if account != "All":
+        filtered = filtered[filtered["account_email"] == account]
+    if source != "All":
+        filtered = filtered[filtered["source"] == source]
+    if priority != "All":
+        filtered = filtered[filtered["priority"] == priority]
+    if status != "All":
+        filtered = filtered[filtered["application_status"] == status]
+    if location:
+        filtered = filtered[filtered["location"].fillna("").astype(str).str.contains(location, case=False, regex=False)]
+    if experience:
+        filtered = filtered[filtered["experience"].fillna("").astype(str).str.contains(experience, case=False, regex=False)]
+    filtered = filtered[filtered["score"].fillna(0) >= minimum]
+
+    if date_filter != "All time":
+        received = pd.to_datetime(filtered["email_received_at"], errors="coerce", utc=True)
+        now = pd.Timestamp.now(tz="UTC")
+        days = {"Today": 1, "Last 3 days": 3, "Last 7 days": 7, "Last 30 days": 30}[date_filter]
+        filtered = filtered[received >= now - pd.Timedelta(days=days)]
+
+    return filtered
+
+
+def _paginated_job_table(database: Database, frame: pd.DataFrame, table_key: str) -> None:
+    if frame.empty:
+        st.info("No jobs match the current filters.")
+        return
+
+    sort_column = st.selectbox(
+        "Sort by",
+        ["email_received_at", "score", "priority", "company", "title", "application_status"],
+        key=f"{table_key}-sort",
+    )
+    descending = st.toggle("Descending", value=True, key=f"{table_key}-descending")
+    frame = frame.sort_values(sort_column, ascending=not descending, na_position="last")
+
+    page_size = st.selectbox("Rows per page", PAGE_SIZE_OPTIONS, index=1, key=f"{table_key}-size")
+    total_rows = len(frame)
+    total_pages = max(1, (total_rows + page_size - 1) // page_size)
+    page_key = f"{table_key}-page"
+    if st.session_state.get(page_key, 1) > total_pages:
+        st.session_state[page_key] = total_pages
+
+    controls = st.columns([1, 1, 2, 1, 1])
+    if controls[0].button("First", key=f"{table_key}-first", disabled=st.session_state.get(page_key, 1) <= 1):
+        st.session_state[page_key] = 1
+        st.rerun()
+    if controls[1].button("Previous", key=f"{table_key}-previous", disabled=st.session_state.get(page_key, 1) <= 1):
+        st.session_state[page_key] = max(1, st.session_state.get(page_key, 1) - 1)
+        st.rerun()
+    page = controls[2].number_input(
+        "Page",
+        min_value=1,
+        max_value=total_pages,
+        value=st.session_state.get(page_key, 1),
+        step=1,
+        key=f"{table_key}-page-input",
+        label_visibility="collapsed",
+    )
+    st.session_state[page_key] = int(page)
+    if controls[3].button("Next", key=f"{table_key}-next", disabled=page >= total_pages):
+        st.session_state[page_key] = min(total_pages, page + 1)
+        st.rerun()
+    if controls[4].button("Last", key=f"{table_key}-last", disabled=page >= total_pages):
+        st.session_state[page_key] = total_pages
+        st.rerun()
+
+    start = (page - 1) * page_size
+    page_frame = frame.iloc[start : start + page_size].copy()
+    st.caption(f"Showing {start + 1}-{min(start + page_size, total_rows)} of {total_rows} matching jobs")
+
+    display_columns = [
+        "unique_id",
+        "score",
+        "priority",
+        "title",
+        "company",
+        "location",
+        "experience",
+        "source",
+        "account_email",
+        "application_status",
+        "email_received_at",
+        "url",
+    ]
+    editable = page_frame[display_columns].reset_index(drop=True)
+    edited = st.data_editor(
+        editable,
+        key=f"{table_key}-editor",
+        hide_index=True,
+        use_container_width=True,
+        num_rows="fixed",
+        disabled=[column for column in display_columns if column != "application_status"],
+        column_config={
+            "unique_id": st.column_config.TextColumn("Job ID", help="Stable unique identifier for this job", width="small"),
+            "score": st.column_config.NumberColumn("Score", min_value=0, max_value=100, width="small"),
+            "priority": st.column_config.TextColumn("Priority", width="small"),
+            "title": st.column_config.TextColumn("Job title", width="large"),
+            "application_status": st.column_config.SelectboxColumn(
+                "Status",
+                options=STATUS_OPTIONS,
+                required=True,
+                width="small",
+            ),
+            "url": st.column_config.LinkColumn("Job link", display_text="Open", width="small"),
+        },
+    )
+
+    original = editable.set_index("unique_id")["application_status"].to_dict()
+    changes = []
+    for row in edited.to_dict("records"):
+        job_id = row["unique_id"]
+        new_status = row["application_status"]
+        if original.get(job_id) != new_status:
+            changes.append((job_id, new_status))
+
+    if changes:
+        for job_id, new_status in changes:
+            database.update_job_status(job_id, new_status)
+        st.success(f"Updated status for {len(changes)} job(s). Other job fields were not changed.")
+        st.rerun()
+
+
+def _render_application_summary(frame: pd.DataFrame) -> None:
+    counts = frame["application_status"].value_counts()
+    cols = st.columns(len(STATUS_OPTIONS))
+    for column, status in zip(cols, STATUS_OPTIONS):
+        column.metric(status, int(counts.get(status, 0)))
+
+
 def jobs_page(database: Database) -> None:
-    st.subheader("Jobs")
-    jobs = database.rows("jobs")
+    st.subheader("Job application tracker")
+    st.caption(
+        "Each row has a permanent Job ID. Edit only the Status column; all other job data is read-only."
+    )
+    jobs = database.rows("jobs", 10000)
     if not jobs:
         st.info("No jobs collected yet. Connect Gmail or run the offline self-check.")
         return
+
     frame = pd.DataFrame(jobs)
-    account_options = ["All", *sorted(frame["account_email"].dropna().unique())]
-    source_options = ["All", *sorted(frame["source"].dropna().unique())]
-    col1, col2, col3 = st.columns(3)
-    account = col1.selectbox("Account", account_options)
-    source = col2.selectbox("Source", source_options)
-    minimum = col3.slider("Minimum score", 0, 100, 60)
-    if account != "All":
-        frame = frame[frame["account_email"] == account]
-    if source != "All":
-        frame = frame[frame["source"] == source]
-    frame = frame[frame["score"] >= minimum]
-    st.dataframe(
-        frame[
-            [
-                "score",
-                "priority",
-                "title",
-                "company",
-                "location",
-                "experience",
-                "source",
-                "account_email",
-                "application_status",
-                "url",
-            ]
-        ],
-        column_config={"url": st.column_config.LinkColumn("Job link")},
-        hide_index=True,
-        use_container_width=True,
-    )
-    with st.expander("Update application status"):
-        selected = st.selectbox(
-            "Job",
-            options=frame["unique_id"].tolist(),
-            format_func=lambda value: frame.loc[frame["unique_id"] == value, "title"].iloc[0],
-        )
-        status = st.selectbox(
-            "Status", ["New", "Saved", "Applied", "Interview", "Offer", "Rejected"]
-        )
-        if st.button("Update status"):
-            database.update_job_status(selected, status)
-            st.success("Application status updated.")
-            st.rerun()
-    if st.button("Generate Excel report"):
+    filtered = _apply_job_filters(frame)
+    _render_application_summary(filtered)
+    _paginated_job_table(database, filtered, "jobs")
+
+    if st.button("Generate Excel report", key="generate-jobs-report"):
         from jobalert.models import Job
 
         report_jobs = []
-        for row in frame.to_dict("records"):
+        for row in filtered.to_dict("records"):
             job = Job(
                 row["title"],
                 row["company"],
@@ -194,6 +327,36 @@ def jobs_page(database: Database) -> None:
             report_jobs.append(job)
         path = write_report(report_jobs, ROOT / "reports")
         st.success(f"Created {path}")
+
+
+def applications_page(database: Database) -> None:
+    st.subheader("Applications")
+    st.caption("Daily job-application workspace. Start with Saved/New jobs, then move each row through the pipeline.")
+    jobs = database.rows("jobs", 10000)
+    if not jobs:
+        st.info("No jobs collected yet.")
+        return
+
+    frame = pd.DataFrame(jobs)
+    filtered = _apply_job_filters(frame)
+    _render_application_summary(filtered)
+
+    focus = st.radio(
+        "Daily focus",
+        ["All", "Today - New/Saved", "Applied", "Interview", "Offer", "Rejected"],
+        horizontal=True,
+        key="application-focus",
+    )
+    if focus == "Today - New/Saved":
+        received = pd.to_datetime(filtered["email_received_at"], errors="coerce", utc=True)
+        filtered = filtered[
+            (received.dt.date == pd.Timestamp.now(tz="UTC").date())
+            & filtered["application_status"].isin(["New", "Saved"])
+        ]
+    elif focus != "All":
+        filtered = filtered[filtered["application_status"] == focus]
+
+    _paginated_job_table(database, filtered, "applications")
 
 
 def app() -> None:
@@ -220,8 +383,11 @@ def app() -> None:
         recent = pd.DataFrame(database.rows("jobs", 20))
         if not recent.empty:
             st.dataframe(
-                recent[["score", "title", "company", "source", "account_email", "url"]],
-                column_config={"url": st.column_config.LinkColumn("Job link")},
+                recent[["unique_id", "score", "title", "company", "source", "account_email", "url"]],
+                column_config={
+                    "unique_id": st.column_config.TextColumn("Job ID"),
+                    "url": st.column_config.LinkColumn("Job link"),
+                },
                 hide_index=True,
                 use_container_width=True,
             )
@@ -230,11 +396,7 @@ def app() -> None:
     with jobs:
         jobs_page(database)
     with tracker:
-        data = pd.DataFrame(database.rows("jobs"))
-        if data.empty:
-            st.info("No applications yet.")
-        else:
-            st.bar_chart(data["application_status"].value_counts())
+        applications_page(database)
     with logs:
         runs = pd.DataFrame(database.rows("runs", 200))
         st.dataframe(runs, hide_index=True, use_container_width=True)
