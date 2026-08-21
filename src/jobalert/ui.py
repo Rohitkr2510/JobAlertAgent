@@ -118,12 +118,12 @@ def accounts_page(database: Database, manager: AccountManager) -> None:
                 st.rerun()
 
 
-def _apply_job_filters(frame: pd.DataFrame) -> pd.DataFrame:
+def _apply_job_filters(frame: pd.DataFrame, filter_key: str) -> pd.DataFrame:
     search = (
         st.text_input(
             "Search jobs",
             placeholder="Search by job ID, title, company, location, skills, or URL...",
-            key="jobs-search",
+            key=f"{filter_key}-search",
         )
         .strip()
         .lower()
@@ -135,19 +135,19 @@ def _apply_job_filters(frame: pd.DataFrame) -> pd.DataFrame:
     statuses = ["All", *STATUS_OPTIONS]
 
     row1 = st.columns(4)
-    account = row1[0].selectbox("Account", accounts, key="jobs-account")
-    source = row1[1].selectbox("Source", sources, key="jobs-source")
-    priority = row1[2].selectbox("Priority", priorities, key="jobs-priority")
-    status = row1[3].selectbox("Application status", statuses, key="jobs-status")
+    account = row1[0].selectbox("Account", accounts, key=f"{filter_key}-account")
+    source = row1[1].selectbox("Source", sources, key=f"{filter_key}-source")
+    priority = row1[2].selectbox("Priority", priorities, key=f"{filter_key}-priority")
+    status = row1[3].selectbox("Application status", statuses, key=f"{filter_key}-status")
 
     row2 = st.columns(4)
-    location = row2[0].text_input("Location contains", key="jobs-location")
-    experience = row2[1].text_input("Experience contains", key="jobs-experience")
-    minimum = row2[2].slider("Minimum score", 0, 100, 0, key="jobs-min-score")
+    location = row2[0].text_input("Location contains", key=f"{filter_key}-location")
+    experience = row2[1].text_input("Experience contains", key=f"{filter_key}-experience")
+    minimum = row2[2].slider("Minimum score", 0, 100, 0, key=f"{filter_key}-min-score")
     date_filter = row2[3].selectbox(
         "Received",
         ["All time", "Today", "Last 3 days", "Last 7 days", "Last 30 days"],
-        key="jobs-date",
+        key=f"{filter_key}-date",
     )
 
     filtered = frame.copy()
@@ -296,7 +296,7 @@ def jobs_page(database: Database) -> None:
         return
 
     frame = pd.DataFrame(jobs)
-    filtered = _apply_job_filters(frame)
+    filtered = _apply_job_filters(frame, "jobs")
     _render_application_summary(filtered)
     _paginated_job_table(database, filtered, "jobs")
 
@@ -334,7 +334,7 @@ def applications_page(database: Database) -> None:
         return
 
     frame = pd.DataFrame(jobs)
-    filtered = _apply_job_filters(frame)
+    filtered = _apply_job_filters(frame, "applications")
     _render_application_summary(filtered)
 
     focus = st.radio(
