@@ -25,8 +25,21 @@ Metrics deliberately avoid account email labels to prevent personal-data leakage
 ## Persistence
 
 - `accounts` contains encrypted OAuth token material and account status.
-- `jobs` contains normalized postings, scores, and application state.
+- `jobs` contains normalized postings, scores, and application tracking state.
 - `runs` is the operational audit trail for synchronization attempts.
 - `settings` stores scheduler and UI preferences.
 
-Schema creation is idempotent. Future schema changes must use versioned migrations before backward-incompatible changes are introduced.
+### `jobs` application-tracking fields
+
+| Field | Purpose |
+|---|---|
+| `unique_id` | Stable primary key and row identity for a job |
+| `application_status` | Current application state: `New`, `Saved`, `Applied`, `Interview`, `Offer`, or `Rejected` |
+| `applied_at` | Timestamp captured when the job first moves to `Applied` |
+| `follow_up_date` | Optional date for the next follow-up |
+| `next_action` | Optional concrete next step |
+| `notes` | Optional application notes and context |
+
+Status updates use `unique_id`, not a table row number or display position. This keeps updates tied to the correct job when filters, sorting, or pagination change the visible order.
+
+Schema creation is idempotent. Existing databases are upgraded by adding missing application-tracking columns without replacing existing job records. Future schema changes must use versioned migrations before backward-incompatible changes are introduced.
