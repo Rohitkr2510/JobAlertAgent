@@ -35,9 +35,7 @@ def test_account_tokens_are_encrypted_and_removable(tmp_path: Path) -> None:
     assert database.rows("accounts") == []
 
 
-def test_authorization_url_returns_pkce_verifier(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_authorization_url_returns_pkce_verifier(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     class FakeFlow:
         code_verifier = "test-code-verifier"
         redirect_uri = None
@@ -63,9 +61,7 @@ def test_authorization_url_returns_pkce_verifier(
     assert verifier == "test-code-verifier"
 
 
-def test_complete_authorization_passes_pkce_verifier(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_complete_authorization_passes_pkce_verifier(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     captured: dict[str, str | None] = {}
 
     class FakeCredentials:

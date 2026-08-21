@@ -24,11 +24,7 @@ PERSONAL_EMAIL = re.compile(r"(?i)\b(?![^@\s]+@example\.com\b)[\w.+-]+@gmail\.co
 
 
 def markdown_files() -> list[Path]:
-    return sorted(
-        path
-        for path in ROOT.rglob("*.md")
-        if not {".git", ".venv", "htmlcov"}.intersection(path.parts)
-    )
+    return sorted(path for path in ROOT.rglob("*.md") if not {".git", ".venv", "htmlcov"}.intersection(path.parts))
 
 
 def validate() -> list[tuple[Path, str]]:

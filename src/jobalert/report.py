@@ -59,11 +59,7 @@ def write_report(jobs: list[Job], output: Path) -> Path:
         for cell in sheet[1]:
             cell.font = Font(bold=True, color="FFFFFF")
             cell.fill = PatternFill("solid", fgColor="1F4E78")
-        selected = (
-            jobs
-            if sheet_name == "All Jobs"
-            else [job for job in jobs if job.priority == sheet_name]
-        )
+        selected = jobs if sheet_name == "All Jobs" else [job for job in jobs if job.priority == sheet_name]
         for job in selected:
             sheet.append(_row(job))
         sheet.freeze_panes = "A2"

@@ -86,9 +86,7 @@ class AccountManager:
 
     def credentials(self, email: str) -> Credentials:
         with self.database.connect() as connection:
-            row = connection.execute(
-                "SELECT token_encrypted FROM accounts WHERE email = ? AND enabled = 1", (email,)
-            ).fetchone()
+            row = connection.execute("SELECT token_encrypted FROM accounts WHERE email = ? AND enabled = 1", (email,)).fetchone()
         if not row:
             raise KeyError(f"Enabled account not found: {email}")
         info = json.loads(self.vault.decrypt(row["token_encrypted"]))
@@ -100,9 +98,7 @@ class AccountManager:
 
     def set_enabled(self, email: str, enabled: bool) -> None:
         with self.database.connect() as connection:
-            connection.execute(
-                "UPDATE accounts SET enabled = ? WHERE email = ?", (int(enabled), email)
-            )
+            connection.execute("UPDATE accounts SET enabled = ? WHERE email = ?", (int(enabled), email))
 
     def remove(self, email: str) -> None:
         with self.database.connect() as connection:

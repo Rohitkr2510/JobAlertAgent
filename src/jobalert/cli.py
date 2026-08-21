@@ -46,9 +46,7 @@ def main() -> None:
         for path in args.maildir.glob("*.eml"):
             jobs.extend(parse_eml(path))
     else:
-        for message in fetch_messages(
-            args.credentials, args.token, config.hours, config.sender_domains
-        ):
+        for message in fetch_messages(args.credentials, args.token, config.hours, config.sender_domains):
             jobs.extend(parse_message(message))
     jobs = [job for job in jobs if is_recent(job, config)]
     jobs = save_new([score_job(job, config) for job in jobs], args.database)

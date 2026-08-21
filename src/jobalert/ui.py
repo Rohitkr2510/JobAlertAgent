@@ -97,19 +97,13 @@ def accounts_page(database: Database, manager: AccountManager) -> None:
             left, middle, right = st.columns([3, 2, 2])
             left.write(f"**{account['email']}**")
             left.caption(f"Last sync: {account['last_sync'] or 'Never'}")
-            enabled = middle.toggle(
-                "Enabled", value=bool(account["enabled"]), key=f"enabled-{account['account_id']}"
-            )
+            enabled = middle.toggle("Enabled", value=bool(account["enabled"]), key=f"enabled-{account['account_id']}")
             manager.set_enabled(account["email"], enabled)
             if right.button("Sync now", key=f"sync-{account['account_id']}"):
                 with st.spinner(f"Scanning {account['email']}..."):
                     try:
-                        result = sync_account(
-                            account["email"], manager, database, load_config(CONFIG_PATH)
-                        )
-                        st.success(
-                            f"Processed {result['emails']} emails; added {result['new']} jobs."
-                        )
+                        result = sync_account(account["email"], manager, database, load_config(CONFIG_PATH))
+                        st.success(f"Processed {result['emails']} emails; added {result['new']} jobs.")
                     except Exception as error:
                         st.error(str(error))
             if account["last_error"]:
@@ -125,11 +119,15 @@ def accounts_page(database: Database, manager: AccountManager) -> None:
 
 
 def _apply_job_filters(frame: pd.DataFrame) -> pd.DataFrame:
-    search = st.text_input(
-        "Search jobs",
-        placeholder="Search by job ID, title, company, location, skills, or URL...",
-        key="jobs-search",
-    ).strip().lower()
+    search = (
+        st.text_input(
+            "Search jobs",
+            placeholder="Search by job ID, title, company, location, skills, or URL...",
+            key="jobs-search",
+        )
+        .strip()
+        .lower()
+    )
 
     accounts = ["All", *sorted(frame["account_email"].dropna().astype(str).unique())]
     sources = ["All", *sorted(frame["source"].dropna().astype(str).unique())]
@@ -291,9 +289,7 @@ def _render_application_summary(frame: pd.DataFrame) -> None:
 
 def jobs_page(database: Database) -> None:
     st.subheader("Job application tracker")
-    st.caption(
-        "Each row has a permanent Job ID. Edit only the Status column; all other job data is read-only."
-    )
+    st.caption("Each row has a permanent Job ID. Edit only the Status column; all other job data is read-only.")
     jobs = database.rows("jobs", 10000)
     if not jobs:
         st.info("No jobs collected yet. Connect Gmail or run the offline self-check.")
@@ -349,10 +345,7 @@ def applications_page(database: Database) -> None:
     )
     if focus == "Today - New/Saved":
         received = pd.to_datetime(filtered["email_received_at"], errors="coerce", utc=True)
-        filtered = filtered[
-            (received.dt.date == pd.Timestamp.now(tz="UTC").date())
-            & filtered["application_status"].isin(["New", "Saved"])
-        ]
+        filtered = filtered[(received.dt.date == pd.Timestamp.now(tz="UTC").date()) & filtered["application_status"].isin(["New", "Saved"])]
     elif focus != "All":
         filtered = filtered[filtered["application_status"] == focus]
 
@@ -374,9 +367,7 @@ def app() -> None:
                 if account["enabled"]:
                     with st.spinner(account["email"]):
                         try:
-                            sync_account(
-                                account["email"], manager, database, load_config(CONFIG_PATH)
-                            )
+                            sync_account(account["email"], manager, database, load_config(CONFIG_PATH))
                         except Exception as error:
                             st.error(f"{account['email']}: {error}")
             st.rerun()
@@ -408,27 +399,19 @@ def app() -> None:
         with st.form("filter-settings"):
             hours = st.number_input("Email age in hours", 1, 168, current.hours)
             minimum_score = st.slider("Minimum score", 0, 100, current.minimum_score)
-            maximum_experience = st.number_input(
-                "Maximum experience", 1, 20, current.maximum_experience_years
-            )
+            maximum_experience = st.number_input("Maximum experience", 1, 20, current.maximum_experience_years)
             roles = st.text_area("Target roles (one per line)", "\n".join(current.role_keywords))
             skills = st.text_area("Skills (one per line)", "\n".join(current.skill_keywords))
-            locations = st.text_area(
-                "Preferred locations (one per line)", "\n".join(current.preferred_locations)
-            )
+            locations = st.text_area("Preferred locations (one per line)", "\n".join(current.preferred_locations))
             if st.form_submit_button("Save filters"):
                 payload = {
                     "hours": int(hours),
                     "minimum_score": int(minimum_score),
                     "high_priority_score": current.high_priority_score,
                     "maximum_experience_years": int(maximum_experience),
-                    "preferred_locations": [
-                        line.strip() for line in locations.splitlines() if line.strip()
-                    ],
+                    "preferred_locations": [line.strip() for line in locations.splitlines() if line.strip()],
                     "role_keywords": [line.strip() for line in roles.splitlines() if line.strip()],
-                    "skill_keywords": [
-                        line.strip() for line in skills.splitlines() if line.strip()
-                    ],
+                    "skill_keywords": [line.strip() for line in skills.splitlines() if line.strip()],
                     "sender_domains": current.sender_domains,
                 }
                 CONFIG_PATH.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
@@ -438,9 +421,7 @@ def app() -> None:
                 "Enable daily automatic scan",
                 value=database.setting("schedule_enabled", "false") == "true",
             )
-            schedule_time = st.text_input(
-                "Daily time (local HH:MM)", database.setting("schedule_time", "08:00")
-            )
+            schedule_time = st.text_input("Daily time (local HH:MM)", database.setting("schedule_time", "08:00"))
             if st.form_submit_button("Save schedule"):
                 database.set_setting("schedule_enabled", str(schedule_enabled).lower())
                 database.set_setting("schedule_time", schedule_time)

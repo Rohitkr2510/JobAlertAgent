@@ -23,8 +23,7 @@ def job_message() -> EmailMessage:
     message["Date"] = datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S %z")
     message.set_content("Job alert")
     message.add_alternative(
-        '<a href="https://example.com/jobs/42" data-company="Acme" '
-        'data-location="Remote">DevOps Engineer</a><p>AWS Docker, 2 years</p>',
+        '<a href="https://example.com/jobs/42" data-company="Acme" data-location="Remote">DevOps Engineer</a><p>AWS Docker, 2 years</p>',
         subtype="html",
     )
     return message
@@ -35,9 +34,7 @@ def test_sync_success_and_self_check(tmp_path: Path, monkeypatch) -> None:
     config = Config(24, 60, 80, 5, ["remote"], ["devops"], ["aws", "docker"], ["linkedin.com"])
     monkeypatch.setattr(sync, "fetch_messages_with_credentials", lambda *_: [job_message()])
 
-    result = sync.sync_account(
-        "owner@example.com", cast(AccountManager, FakeManager()), database, config
-    )
+    result = sync.sync_account("owner@example.com", cast(AccountManager, FakeManager()), database, config)
 
     assert result["emails"] == 1
     assert result["new"] == 1
@@ -54,7 +51,5 @@ def test_sync_failure_is_recorded(tmp_path: Path, monkeypatch) -> None:
 
     monkeypatch.setattr(sync, "fetch_messages_with_credentials", fail)
     with pytest.raises(RuntimeError, match="temporary Gmail failure"):
-        sync.sync_account(
-            "owner@example.com", cast(AccountManager, FakeManager()), database, config
-        )
+        sync.sync_account("owner@example.com", cast(AccountManager, FakeManager()), database, config)
     assert database.rows("runs")[0]["status"] == "failed"

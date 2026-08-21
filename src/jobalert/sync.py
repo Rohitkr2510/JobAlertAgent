@@ -12,17 +12,13 @@ from jobalert.scoring import is_recent, score_job
 LOGGER = logging.getLogger(__name__)
 
 
-def sync_account(
-    email: str, manager: AccountManager, database: Database, config: Config
-) -> dict[str, int | str]:
+def sync_account(email: str, manager: AccountManager, database: Database, config: Config) -> dict[str, int | str]:
     started = datetime.now(UTC).isoformat()
     messages = 0
     jobs = []
     try:
         credentials = manager.credentials(email)
-        for message in fetch_messages_with_credentials(
-            credentials, config.hours, config.sender_domains
-        ):
+        for message in fetch_messages_with_credentials(credentials, config.hours, config.sender_domains):
             messages += 1
             for job in parse_message(message):
                 job.account_email = email
@@ -51,9 +47,7 @@ def sync_account(
         return {"account": email, "emails": messages, "jobs": len(jobs), "new": len(fresh)}
     except Exception as error:
         with database.connect() as connection:
-            connection.execute(
-                "UPDATE accounts SET last_error = ? WHERE email = ?", (str(error), email)
-            )
+            connection.execute("UPDATE accounts SET last_error = ? WHERE email = ?", (str(error), email))
             connection.execute(
                 """INSERT INTO runs
                 (started_at, account_email, status, error) VALUES (?, ?, 'failed', ?)""",

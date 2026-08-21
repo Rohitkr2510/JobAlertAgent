@@ -19,12 +19,7 @@ def iter_message_ids(service: Any, query: str) -> Iterator[str]:
     """Yield every matching message ID across Gmail result pages."""
     page_token = None
     while True:
-        response = (
-            service.users()
-            .messages()
-            .list(userId="me", q=query, maxResults=500, pageToken=page_token)
-            .execute()
-        )
+        response = service.users().messages().list(userId="me", q=query, maxResults=500, pageToken=page_token).execute()
         yield from (item["id"] for item in response.get("messages", []))
         page_token = response.get("nextPageToken")
         if not page_token:
@@ -44,15 +39,11 @@ def _credentials(credentials_path: Path, token_path: Path):
         from google_auth_oauthlib.flow import InstalledAppFlow
     except ImportError as error:
         raise RuntimeError("Install Gmail support with: pip install -e '.[gmail]'") from error
-    credentials = (
-        Credentials.from_authorized_user_file(token_path, SCOPES) if token_path.exists() else None
-    )
+    credentials = Credentials.from_authorized_user_file(token_path, SCOPES) if token_path.exists() else None
     if credentials and credentials.expired and credentials.refresh_token:
         credentials.refresh(Request())
     if not credentials or not credentials.valid:
-        credentials = InstalledAppFlow.from_client_secrets_file(
-            credentials_path, SCOPES
-        ).run_local_server(port=0)
+        credentials = InstalledAppFlow.from_client_secrets_file(credentials_path, SCOPES).run_local_server(port=0)
     token_path.parent.mkdir(parents=True, exist_ok=True)
     token_path.write_text(credentials.to_json(), encoding="utf-8")
     return credentials
@@ -63,9 +54,7 @@ def authenticate(credentials_path: Path, token_path: Path) -> None:
 
 
 def fetch_messages(credentials_path: Path, token_path: Path, hours: int, domains: list[str]):
-    yield from fetch_messages_with_credentials(
-        _credentials(credentials_path, token_path), hours, domains
-    )
+    yield from fetch_messages_with_credentials(_credentials(credentials_path, token_path), hours, domains)
 
 
 def fetch_messages_with_credentials(credentials, hours: int, domains: list[str]):
@@ -73,7 +62,5 @@ def fetch_messages_with_credentials(credentials, hours: int, domains: list[str])
 
     service = build("gmail", "v1", credentials=credentials, cache_discovery=False)
     for message_id in iter_message_ids(service, build_query(hours, domains)):
-        response = (
-            service.users().messages().get(userId="me", id=message_id, format="raw").execute()
-        )
+        response = service.users().messages().get(userId="me", id=message_id, format="raw").execute()
         yield decode_raw_message(response["raw"])
