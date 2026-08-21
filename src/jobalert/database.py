@@ -53,7 +53,11 @@ class Database:
                     application_status TEXT NOT NULL DEFAULT 'New',
                     reason TEXT,
                     first_seen TEXT NOT NULL,
-                    raw_context TEXT
+                    raw_context TEXT,
+                    applied_at TEXT,
+                    follow_up_date TEXT,
+                    next_action TEXT,
+                    notes TEXT
                 );
                 CREATE TABLE IF NOT EXISTS runs (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,40 +75,42 @@ class Database:
                 );
                 """
             )
+            existing = {row["name"] for row in connection.execute("PRAGMA table_info(jobs)")}
+            for column, definition in {
+                "applied_at": "TEXT",
+                "follow_up_date": "TEXT",
+                "next_action": "TEXT",
+                "notes": "TEXT",
+            }.items():
+                if column not in existing:
+                    connection.execute(f"ALTER TABLE jobs ADD COLUMN {column} {definition}")
 
     def save_jobs(self, jobs: list[Job]) -> list[Job]:
         fresh: list[Job] = []
         with self.connect() as connection:
             for job in jobs:
                 cursor = connection.execute(
-                    """INSERT OR IGNORE INTO jobs VALUES
-                    (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    """INSERT OR IGNORE INTO jobs (
+                    unique_id, title, company, location, experience, skills,
+                    posted_at, email_received_at, source, account_email, url,
+                    score, priority, date_verified, application_status, reason,
+                    first_seen, raw_context
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                     (
-                        job.unique_id,
-                        job.title,
-                        job.company,
-                        job.location,
-                        job.experience,
-                        ", ".join(job.skills),
+                        job.unique_id, job.title, job.company, job.location,
+                        job.experience, ", ".join(job.skills),
                         job.posted_at.isoformat() if job.posted_at else None,
-                        job.email_received_at.isoformat(),
-                        job.source,
-                        job.account_email,
-                        job.url,
-                        job.score,
-                        job.priority,
-                        int(job.date_verified),
-                        job.application_status,
-                        job.reason,
-                        job.email_received_at.isoformat(),
-                        job.text[:4000],
+                        job.email_received_at.isoformat(), job.source,
+                        job.account_email, job.url, job.score, job.priority,
+                        int(job.date_verified), job.application_status, job.reason,
+                        job.email_received_at.isoformat(), job.text[:4000],
                     ),
                 )
                 if cursor.rowcount:
                     fresh.append(job)
         return fresh
 
-    def rows(self, table: str, limit: int = 1000) -> list[dict]:
+    def rows(self, table: str, limit: int = 10000) -> list[dict]:
         queries = {
             "accounts": "SELECT * FROM accounts ORDER BY rowid DESC LIMIT ?",
             "jobs": "SELECT * FROM jobs ORDER BY rowid DESC LIMIT ?",
@@ -121,9 +127,31 @@ class Database:
         if status not in allowed:
             raise ValueError("Invalid application status")
         with self.connect() as connection:
+            if status == "Applied":
+                connection.execute(
+                    "UPDATE jobs SET application_status = ?, applied_at = COALESCE(applied_at, datetime('now')) WHERE unique_id = ?",
+                    (status, unique_id),
+                )
+            else:
+                connection.execute(
+                    "UPDATE jobs SET application_status = ? WHERE unique_id = ?",
+                    (status, unique_id),
+                )
+
+    def update_job_tracking(
+        self,
+        unique_id: str,
+        *,
+        follow_up_date: str | None = None,
+        next_action: str | None = None,
+        notes: str | None = None,
+    ) -> None:
+        with self.connect() as connection:
             connection.execute(
-                "UPDATE jobs SET application_status = ? WHERE unique_id = ?",
-                (status, unique_id),
+                """UPDATE jobs
+                   SET follow_up_date = ?, next_action = ?, notes = ?
+                   WHERE unique_id = ?""",
+                (follow_up_date or None, next_action or None, notes or None, unique_id),
             )
 
     def setting(self, key: str, default: str = "") -> str:
