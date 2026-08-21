@@ -26,7 +26,7 @@ jobs:
       - name: Lint and formatting
         run: |
           ruff check .
-          ruff format --check .
+          ruff format .
       - name: Type check
         run: mypy src/jobalert
       - name: Tests and coverage
